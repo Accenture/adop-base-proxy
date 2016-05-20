@@ -1,26 +1,26 @@
-FROM gliderlabs/alpine:3.3
+FROM alpine:3.3
 
-RUN apk-install	alpine-sdk \
+RUN apk --update add \
+		openssl-dev \
 		pcre-dev \
-		openssl-dev
+		zlib-dev \
+		git \
+		wget \
+		build-base && \
+		rm -rf /var/cache/apk/*
 
 ENV nginx_home /var/tmp/nginx
 
-# Lets do some best practises writing dockefile. :D
-ENV RUN_USER            proxy
-ENV RUN_GROUP           proxy
+ENV RUN_USER  proxy
+ENV RUN_GROUP proxy
 
 RUN adduser -u 1001 -S ${RUN_USER} && addgroup -S ${RUN_GROUP}
-
 RUN mkdir -p ${nginx_home}
 
 ENV nginx_version 1.9.7
 ENV header_module_version 0.29
 
 WORKDIR ${nginx_home}
-
-
-#TODO need to remove the git clone lines and get from everything else from a trusted source.
 
 RUN wget http://nginx.org/download/nginx-${nginx_version}.tar.gz \
     && git clone https://github.com/nginx-shib/nginx-http-shibboleth.git \
@@ -39,11 +39,11 @@ RUN tar zxvf v${header_module_version}.tar.gz \
 
 # Lets clean up
 RUN rm -rf ${nginx_home} \
-    && apk del alpine-sdk
+    && apk del git build-base
 
 RUN mkdir -p /usr/local/nginx/ \
     && mkdir -p /usr/local/nginx/sites-enabled/ \
-    && mkdir -p /usr/local/nginx/includes.d 
+    && mkdir -p /usr/local/nginx/includes.d
 
 ADD servers/sites-enabled /usr/local/nginx/sites-enabled/
 ADD servers/conf /usr/local/nginx/conf/
@@ -52,12 +52,8 @@ RUN chmod -R 700 /usr/local/nginx/ \
     && chown -R ${RUN_USER}:${RUN_GROUP}  /usr/local/nginx/ \
     && rm -f /usr/local/nginx/conf/nginx.conf.default
 
-
 EXPOSE 80 443
 
 WORKDIR /usr/local/nginx
 
 CMD ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;"]
-
-
-
